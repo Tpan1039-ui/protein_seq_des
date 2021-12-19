@@ -49,6 +49,7 @@ class RunManager(object):
 
         # design inputs
         self.parser.add_argument("--pdb", type=str, default="pdbs/tim10.pdb", help="Input PDB")
+        self.parser.add_argument("--gpu_id", type=str, default='0', help="GPU device IDs available to use")
         self.parser.add_argument(
             "--model_list",
             "--list",
