@@ -69,7 +69,7 @@ class RunManager(object):
         self.parser.add_argument(
             "--log_dir", type=str, default="./logs", help="Path to desired output log folder for designed structures",
         )
-        self.parser.add_argument("--seed", default=2, type=int, help="Random seed. Design runs are non-deterministic.")
+        self.parser.add_argument("--seed", default=random.randint(0,2**32-1), type=int, help="Random seed. Design runs are non-deterministic.")
         self.parser.add_argument(
             "--save_rate", type=int, default=10, help="How often to save intermediate designed structures",
         )
