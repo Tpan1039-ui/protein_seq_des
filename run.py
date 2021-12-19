@@ -3,6 +3,10 @@ import os
 import torch
 import torch.nn as nn
 
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
 from seq_des import *
 import seq_des.sampler as sampler
 import seq_des.models as models
@@ -79,7 +83,7 @@ def main():
     manager.parse_args()
     args = manager.args
     log = manager.log
-
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
     use_cuda = torch.cuda.is_available()
 
     # download pdb if not there already
@@ -124,8 +128,11 @@ def main():
 
     # initialize design_sampler sequence with baseline model prediction or random/poly-alanine/poly-valine initial sequence, save initial model
     design_sampler.init_seq()
-    design_sampler.pose.dump_pdb(log.log_path + "/" + "curr_0_%s.pdb" % (log.ts))
-
+#    design_sampler.pose.dump_pdb(log.log_path + "/" + "curr_0_%s.pdb" % (log.ts))
+    tmp_seq = SeqRecord(Seq(design_sampler.pose.sequence()), id="0", name="initial_sequence")
+    with open(log.log_path + "/" + "sequence.fasta", "w") as handle:
+        SeqIO.write(tmp_seq, handle, "fasta")
+        
     # run design
     with torch.no_grad():
         for i in tqdm(range(1, int(args.n_iters)), desc='running design'):
@@ -137,22 +144,27 @@ def main():
             log_metrics(args=args, log=log, iteration=i, design_sampler=design_sampler)
 
             if design_sampler.log_p_mean < best_energy:
-                design_sampler.pose.dump_pdb(log.log_path + "/" + "curr_best_log_p_%s.pdb" % log.ts)
+            #    design_sampler.pose.dump_pdb(log.log_path + "/" + "curr_best_log_p_%s.pdb" % log.ts)
                 best_energy = design_sampler.log_p_mean
 
             if design_sampler.rosetta_energy < best_rosetta_energy:
-                design_sampler.pose.dump_pdb(log.log_path + "/" + "curr_best_rosetta_energy_%s.pdb" % log.ts)
+            #    design_sampler.pose.dump_pdb(log.log_path + "/" + "curr_best_rosetta_energy_%s.pdb" % log.ts)
                 best_rosetta_energy = design_sampler.rosetta_energy
 
             # save intermediate models -- comment out if desired
             if (i==1) or (i % args.save_rate == 0) or (i == args.n_iters - 1):
-                design_sampler.pose.dump_pdb(log.log_path + "/" + "curr_%s_%s.pdb" % (i, log.ts))
+            #    design_sampler.pose.dump_pdb(log.log_path + "/" + "curr_%s_%s.pdb" % (i, log.ts))
+                tmp_seq = SeqRecord(Seq(design_sampler.pose.sequence()), id=str(i), name="step_%s"%(i))
+                with open(log.log_path + "/" + "sequence.fasta", "a") as handle:
+                    SeqIO.write(tmp_seq, handle, "fasta")
 
             log.advance_iteration()
 
     # save final model
     design_sampler.pose.dump_pdb(log.log_path + "/" + "curr_final.pdb")
-
+    tmp_seq = SeqRecord(Seq(design_sampler.pose.sequence()), id="final", name="final_sequence")
+    with open(log.log_path + "/" + "sequence.fasta", "a") as handle:
+        SeqIO.write(tmp_seq, handle, "fasta")
 
 if __name__ == "__main__":
     main()
